@@ -136,7 +136,7 @@ class Graph():
 				
 				self.loss_mels = self.l1_loss+self.bin_div
 				self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=hp.b1, beta2=hp.b2, epsilon=hp.eps)
-				self.gvs = self.optimizer.compute_gradients(self.loss_mels)
+				self.gvs = self.optimizer.compute_gradients(self.loss_mels) 
 				self.clipped = []
 				for grad, var in self.gvs:
 					if grad is not None:
