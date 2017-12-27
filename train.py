@@ -135,7 +135,7 @@ class Graph():
 				self.bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mel_logits,labels=self.decoder_inputs))
 				
 				self.loss_mels = self.l1_loss+self.bin_div
-				self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=0.5, beta2=0.9, epsilon=1e-5)
+				self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=hp.b1, beta2=hp.b2, epsilon=hp.eps)
 				self.gvs = self.optimizer.compute_gradients(self.loss_mels)
 				self.clipped = []
 				for grad, var in self.gvs:
