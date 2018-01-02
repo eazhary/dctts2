@@ -75,7 +75,7 @@ class Graph():
 				self.mag = tf.reshape(self.mag,shape=[-1,hp.Ty,1+hp.n_fft//2])
 				w = np.fromfunction(w_fun, (hp.Ty, hp.maxlen), dtype='f')
 				w = np.expand_dims(w,0)
-				w = np.repeat(w,2,0)
+				w = np.repeat(w,hp.batch_size,0)
 				self.A_guide = tf.convert_to_tensor(w)
 			
 #				self.y = tf.reshape(self.y,shape=[-1,hp.Ty,])
