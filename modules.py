@@ -312,18 +312,87 @@ def feedforward(inputs,
     
     return outputs
 	
-def Conv1D(inputs, channels, kernel_size, dilation, activation=None, scope = "Conv1D", reuse=None):
+def conv_block(inputs,
+			   num_units=None,
+			   size=5,
+			   rate=1,
+			   padding="SAME",
+			   dropout_rate=0,
+			   training=False,
+			   activation=None,
+			   scope="conv_block",
+			   reuse=None):
+	'''Convolution block.
+	Args:
+	  inputs: A 3-D tensor with shape of [batch, time, depth].
+	  size: An int. Filter size.
+	  padding: Either `same` or `valid` or `causal` (case-insensitive).
+	  norm_type: A string. See `normalize`.
+	  activation_fn: A string. Activation function.
+	  training: A boolean. Whether or not the layer is in training mode.
+	  scope: Optional scope for `variable_scope`.
+	  reuse: Boolean, whether to reuse the weights of a previous layer
+		by the same name.
+	Returns:
+	  A tensor of the same shape and dtype as inputs.
+	'''
+	in_dim = inputs.get_shape().as_list()[-1]
+	if num_units is None: num_units = in_dim
+
+	with tf.variable_scope(scope, reuse=reuse):
+		inputs = tf.layers.dropout(inputs, rate=dropout_rate, training=training)
+
+		if padding.lower() == "causal":
+			# pre-padding for causality
+			pad_len = (size - 1) * rate	 # padding size
+			inputs = tf.pad(inputs, [[0, 0], [pad_len, 0], [0, 0]])
+			padding = "VALID"
+
+		V = tf.get_variable('V',
+							shape=[size, in_dim, num_units],
+							dtype=tf.float32) # (width, in_dim, out_dim)
+		g = tf.get_variable('g',
+							shape=(num_units,),
+							dtype=tf.float32,
+							initializer=tf.contrib.layers.variance_scaling_initializer(factor=(4.*(1.-dropout_rate))/size))
+		b = tf.get_variable('b',
+							shape=(num_units,),
+							dtype=tf.float32,
+							initializer=tf.zeros_initializer)
+
+		V_norm = tf.nn.l2_normalize(V, [0, 1])	# (width, in_dim, out_dim)
+		W = V_norm * tf.reshape(g, [1, 1, num_units])
+
+		outputs = tf.nn.convolution(inputs, W, padding, dilation_rate=[rate]) + b
+		if activation is not None:
+			outputs=activation(outputs)
+		#outputs = glu(outputs)
+
+	return outputs	
+def dConv1D(inputs, channels, kernel_size, dilation, activation=None, scope = "Conv1D", reuse=None):
 	with tf.variable_scope(scope, reuse=reuse):
 		outputs = tf.layers.conv1d(inputs,filters=channels,kernel_size=kernel_size,strides=1,padding='same',dilation_rate=dilation,activation=activation,reuse=reuse)
 	return outputs
 
-def HConv1D(inputs, channels, kernel_size, dilation, activation=None, scope = "HConv1D", reuse=None):
+def Conv1D(inputs, channels, kernel_size, dilation,causal=True,is_training=True, activation=None, dropout=0.1, scope = "Conv1D", reuse=None):
 	with tf.variable_scope(scope, reuse=reuse):
-		H2 = Conv1D(inputs, channels, kernel_size, dilation=dilation, activation=activation,scope='c1d-H2')
-		H1 = Conv1D(inputs, channels, kernel_size, dilation=dilation, activation=tf.nn.sigmoid,scope='c1d-H1')
+		outputs = conv_block(inputs,num_units=channels, size=kernel_size,rate=dilation,training=is_training,activation=activation,dropout_rate=dropout)
+	return outputs
+
+def HConv1D(inputs, channels, kernel_size, dilation, causal=True,is_training=True, activation=None, scope = "HConv1D", reuse=None):
+	with tf.variable_scope(scope, reuse=reuse):
+		H2 = Conv1D(inputs, channels, kernel_size, dilation=dilation, causal=causal,is_training=is_training,activation=activation,scope='c1d-H2')
+		H1 = Conv1D(inputs, channels, kernel_size, dilation=dilation, causal=causal,is_training=is_training,activation=tf.nn.sigmoid,scope='c1d-H1')
 	return H1 * H2 + inputs * (1.0 - H1)
 
-	
+def dilated_causal_conv1d(x, filter,kernel, dialation):
+    padding = (tf.shape(filter)[0] - 1) * dialation
+    x = tf.pad(x, ((0, 0), (padding, 0), (0, 0)))
+    filter = tf.expand_dims(filter, 0)
+    x = tf.expand_dims(x, 0)
+    x = tf.nn.atrous_conv2d(x, filter, dialation, 'VALID')
+    x = tf.squeeze(x, (0,))
+    return x[:, padding:]	
 def label_smoothing(inputs, epsilon=0.1):
     '''Applies label smoothing. See https://arxiv.org/abs/1512.00567.
     

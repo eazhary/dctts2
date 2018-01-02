@@ -20,17 +20,17 @@ def showmels(mel1,mel2,msg):
 	plt.show()
 	#plt.savefig(msg,format='png')
 
-def show(mel1,mel2):
+def show(mel1,mel2,name):
 	plt.figure(figsize=(20,4))
 	plt.subplot(2,1,1)
 	plt.imshow(np.transpose(mel1),interpolation='nearest',  cmap=plt.cm.afmhot, origin='lower')
-	plt.title("Original")
+	plt.title("Generated")
 	plt.colorbar()
 	plt.subplot(2,1,2)
 	plt.imshow(np.transpose(mel2),interpolation='nearest',  cmap=plt.cm.afmhot, origin='lower')
-	plt.title("Second")
+	plt.title("Original")
 	plt.colorbar()
-	plt.savefig("test.png")
+	plt.savefig(name)
 	plt.cla()
 	plt.close('all')
 	#plt.show()
