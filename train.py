@@ -143,8 +143,8 @@ class Graph():
 					for i in range(2):
 						self.audiodec=HConv1D(self.audiodec,hp.d,3,1,is_training=is_training,scope='hc1d-5-%d'%i)
 					for i in range(3):
-						self.audiodec=Conv1D(self.audiodec,hp.d,1,1,is_training=is_training,scope='c1d-2-%d'%i,activation=tf.nn.relu)
-					self.mel_logits = Conv1D(self.audiodec,hp.n_mels,1,1,is_training=is_training,scope='c1d-3') # (B,Ty,nmels)
+						self.audiodec=Conv1D(self.audiodec,hp.d,1,1,dropout=0,is_training=is_training,scope='c1d-2-%d'%i,activation=tf.nn.relu)
+					self.mel_logits = Conv1D(self.audiodec,hp.n_mels,1,1,dropout=0,is_training=is_training,scope='c1d-3') # (B,Ty,nmels)
 					self.mel_output = tf.nn.sigmoid(self.mel_logits)
 							
 			

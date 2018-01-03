@@ -369,14 +369,56 @@ def conv_block(inputs,
 		#outputs = glu(outputs)
 
 	return outputs	
-def dConv1D(inputs, channels, kernel_size, dilation, activation=None, scope = "Conv1D", reuse=None):
+
+	
+def conv_block2(inputs,
+			   num_units=None,
+			   size=5,
+			   rate=1,
+			   padding="SAME",
+			   dropout_rate=0,
+			   training=False,
+			   activation=None,
+			   scope="conv_block",
+			   reuse=None):
 	with tf.variable_scope(scope, reuse=reuse):
-		outputs = tf.layers.conv1d(inputs,filters=channels,kernel_size=kernel_size,strides=1,padding='same',dilation_rate=dilation,activation=activation,reuse=reuse)
+		inputs = tf.layers.dropout(inputs, rate=dropout_rate, training=training)
+		w = tf.get_variable('w', [1, size, inputs.get_shape()[-1], num_units ],
+			initializer=tf.truncated_normal_initializer(stddev=0.02))
+		b = tf.get_variable('b', [num_units ],
+			initializer=tf.constant_initializer(0.0))
+
+		if padding.lower() == "causal":
+			# pre-padding for causality
+			pad_len = (size - 1) * rate	 # padding size
+			inputs = tf.pad(inputs, [[0, 0], [pad_len, 0], [0, 0]])
+			inputs_expanded = tf.expand_dims(inputs,dim=1)
+			padding = "VALID"
+			out = tf.nn.atrous_conv2d(inputs_expanded,w,rate=rate,padding='VALID')+b
+		else:
+			inputs_expanded = tf.expand_dims(inputs,dim=1)
+			out = tf.nn.atrous_conv2d(inputs_expanded,w,rate=rate,padding='SAME')+b
+		out = tf.squeeze(out,[1])
+		if activation is not None:
+			out = activation(out)
+	return out	
+	
+	
+def Conv1D(inputs, channels, kernel_size, dilation,causal=True,is_training=True,dropout=0.1, activation=None, scope = "Conv1D", reuse=None):
+	with tf.variable_scope(scope, reuse=reuse):
+		inputs = tf.layers.dropout(inputs, rate=dropout,training=is_training)
+		if causal:
+			pad_len = (kernel_size - 1) * dilation	 # padding size
+			inputs = tf.pad(inputs, [[0, 0], [pad_len, 0], [0, 0]])
+			outputs = tf.layers.conv1d(inputs,filters=channels,kernel_size=kernel_size,strides=1,padding='valid',dilation_rate=dilation,activation=activation,reuse=reuse)
+		else:
+			outputs = tf.layers.conv1d(inputs,filters=channels,kernel_size=kernel_size,strides=1,padding='same',dilation_rate=dilation,activation=activation,reuse=reuse)
+		
 	return outputs
 
-def Conv1D(inputs, channels, kernel_size, dilation,causal=True,is_training=True, activation=None, dropout=0.1, scope = "Conv1D", reuse=None):
+def ddConv1D(inputs, channels, kernel_size, dilation,causal=True,is_training=True, activation=None, dropout=0.1, scope = "Conv1D", reuse=None):
 	with tf.variable_scope(scope, reuse=reuse):
-		outputs = conv_block(inputs,num_units=channels, size=kernel_size,rate=dilation,training=is_training,activation=activation,dropout_rate=dropout)
+		outputs = conv_block2(inputs,num_units=channels, size=kernel_size,rate=dilation,training=is_training,activation=activation,dropout_rate=dropout)
 	return outputs
 
 def HConv1D(inputs, channels, kernel_size, dilation, causal=True,is_training=True, activation=None, scope = "HConv1D", reuse=None):
