@@ -560,26 +560,26 @@ def conv1d(x,
 	shapes=tf.shape(x)
 	b, in_time,in_channels = x.get_shape().as_list()
 	#filt = (filter_length,shapes[1],num_filters)
-	print("in ",name,b,in_time,in_channels)
+	##print("in ",name,b,in_time,in_channels)
 	init = tf.contrib.layers.xavier_initializer()
-	print(filter_length,in_channels,num_filters)
+	##print(filter_length,in_channels,num_filters)
 	filters_ = tf.Variable(init([filter_length,in_channels,num_filters]), name = 'filter')
 	padding = [[0, 0], [(filter_length - 1) * dilation, 0], [0, 0]] #this may need to be adjusted for padding on both sides 
 	padded = tf.pad(x, padding)
 	if dilation>1:
 		transformed = time_to_batch(padded,dilation)
 		b,t,c = transformed.get_shape().as_list()
-		print("trans ",name,b,t,c)
-		conv = tf.nn.conv1d(transformed,filters_,stride=1,padding='VALID')
+		##print("trans ",name,b,t,c)
+		conv = tf.nn.conv1d(transformed,filters_,stride=1,padding='SAME')
 		restored = batch_to_time(conv,dilation)
 	else:
-		restored = tf.nn.conv1d(padded,filters_,stride=1,padding='VALID')
+		restored = tf.nn.conv1d(padded,filters_,stride=1,padding='SAME')
 	b,t,c = restored.get_shape().as_list()
-	print("restored ",name,b,t,c)
+	##print("restored ",name,b,t,c)
 	#out_width = in_time-(filter_length-1)*dilation
 	result = tf.slice(restored,[0,0,0],[-1,in_time,-1])
 	b,t,c = result.get_shape().as_list()
-	print("out ",name,b,t,c)
+	##print("out ",name,b,t,c)
 	return result
 		
 

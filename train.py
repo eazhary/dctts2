@@ -127,12 +127,18 @@ class Graph():
 					for i in range(2):
 						self.audioenc=HConv1D(self.audioenc,hp.d,3,3,is_training=is_training,scope='hc1d-11-%d'%i)
 					self.Q = self.audioenc										# (B,Ty,d)
-				self.A = tf.matmul(self.Q,self.K,transpose_b=True)	  # (B,Ty,d) * (B,N,d).T  -> (B,T,N) ---- d,N Ty,d
-#				self.A *= tf.sqrt(1/tf.to_float(hp.d))
-				self.A = tf.nn.softmax(self.A/tf.sqrt(tf.to_float(hp.d)))				# (B,Ty,N) (32,870,180)
+
+				self.KT = tf.transpose(self.K,perm=[0,2,1]) # B,d,180
+				self.VT = tf.transpose(self.V,perm=[0,2,1]) # B,d,180
+				self.QT = tf.transpose(self.Q,perm=[0,2,1]) # B,d,870
+				self.A = tf.matmul(self.K,self.QT)	  # (B,180,d) * (B,d,870) = (B,180,870)
+				self.A *= tf.sqrt(1/tf.to_float(hp.d))
+				#self.A = tf.nn.softmax(self.A) 
 				if not is_training:
-					self.A = self.A_guide			
-				self.R = tf.matmul(self.A,self.V)			# (B,Ty,N) * (B,N,d) = (B,Ty,d)
+					self.A = self.A_guide
+				self.AT = tf.transpose(self.A,perm=[0,2,1]) # (B,870,180)
+				self.AT = tf.nn.softmax(self.AT)
+				self.R = tf.matmul(self.AT,self.V)			# (B,870,180) (B,180,256) -> B,870,256
 				self.Rhat = tf.concat((self.R,self.Q),2)		# (B,Ty,d),(B,Ty,d) --> (B,Ty,2d)
 				with tf.variable_scope("AudioDec"):
 					self.audiodec = Conv1D(self.Rhat,hp.d,1,1,is_training=is_training,scope='c1d-1')
@@ -152,9 +158,9 @@ class Graph():
 				# Loss
 				self.global_step = tf.Variable(0, name='global_step', trainable=False)
 				self.learning_rate = _learning_rate_decay(self.global_step)
-				self.l1_loss = tf.reduce_mean(tf.abs(self.mel_output - self.mel))
+				self.l1_loss = tf.reduce_mean(tf.abs(self.mel-self.mel_output))
 				self.bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mel_logits,labels=self.mel))
-				self.A_loss = tf.reduce_mean(tf.abs(self.A_guide*self.A))
+				self.A_loss = tf.reduce_mean(tf.abs(self.A_guide*self.AT))
 				self.loss_mels = self.l1_loss+self.bin_div+self.A_loss
 				self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=hp.b1, beta2=hp.b2, epsilon=hp.eps)
 				self.gvs = self.optimizer.compute_gradients(self.loss_mels) 
@@ -195,7 +201,7 @@ def showmels(mel,msg,file):
 	fig, ax = plt.subplots(nrows=1,ncols=1, figsize=(20,4))
 	cax = ax.matshow(np.transpose(mel), interpolation='nearest',  cmap=plt.cm.afmhot, origin='lower')
 	fig.colorbar(cax)
-	plt.title(msg)
+	plt.title(msg+str(len(msg)))
 	plt.savefig(file,format='png')
 	plt.cla()
 	plt.close('all')
@@ -220,15 +226,15 @@ if __name__ == '__main__':
 	
 	with sv.managed_session() as sess:
 		while not sv.should_stop(): 
-			gs,loss,l1,bin,A_loss,mels,inp,A,guide,text,ops=sess.run([g.global_step,g.loss_mels,g.l1_loss,g.bin_div,g.A_loss,g.mel_output,g.mel,g.A,g.A_guide,g.text,g.train_op])
+			gs,loss,l1,bin,A_loss,mels,inp,AT,guide,text,ops=sess.run([g.global_step,g.loss_mels,g.l1_loss,g.bin_div,g.A_loss,g.mel_output,g.mel,g.AT,g.A_guide,g.text,g.train_op])
 #			gs, text = sess.run([g.global_step,g.text])
 			message = "Step %-7d : loss=%.05f,l1=%.05f,bin=%.05f,A_loss=%.05f" % (gs,loss,l1,bin,A_loss)
 			print(message)
 			if gs % 10 == 0:
 				show(mels[0],inp[0],"0.png")
 				show(mels[1],inp[1],"1.png")
-				showmels(A[0],tdecode(text[0]),"a0.png")
-				showmels(A[1],tdecode(text[1]),"a1.png")
+				showmels(AT[0],tdecode(text[0]),"a0.png")
+				showmels(AT[1],tdecode(text[1]),"a1.png")
 				showmels(guide[0],tdecode(text[0]),"m0.png")
 				
 
