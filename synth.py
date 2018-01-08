@@ -32,9 +32,11 @@ def eval():
 #	  X, Sources, Targets = X[:33], Sources[:33], Targets[:33]
 	 
 	# Start session			
-	with g.graph.as_default():	  
-		sv = tf.train.Supervisor(logdir=hp.logdir)
-		with sv.managed_session() as sess:
+	with g.graph.as_default():
+		with tf.Session() as sess:
+			saver = tf.train.Saver()
+			saver.restore(sess, tf.train.latest_checkpoint(hp.logdir));
+			print("Restored")
 			preds = np.zeros((1, hp.Ty, hp.n_mels), np.float32)
 			for j in range(200):
 				print("Processing %d"%j)
@@ -44,22 +46,6 @@ def eval():
 				#showmels(a[0],"Attention","att%d.png"%j)
 				#preds = _preds
 			show(preds[0],mels,"predicted.png")
-			## Inference
-			# while (1):
-					# testVar = input("input:")
-					# x = [char2idx[c] for c in testVar+'E']
-					# x+=[0]*(hp.maxlen-len(x))
-					# x = np.array(x)
-					# x = x.reshape(1,-1)
-					# #preds = np.zeros((hp.batch_size, hp.maxlen), np.int32)
-					# preds = np.zeros((1, hp.maxlen), np.int32)
-					# for j in range(hp.maxlen):
-							# _preds = sess.run(g.preds, {g.x: x, g.y: preds})
-							# #print(j,"->","".join(idx2char[idx] for idx in _preds[0]).split("E")[0].strip())
-							# preds[:, j] = _preds[:, j]
-					# got = "".join(idx2char[idx] for idx in preds[0]).split("E")[0].strip()
-					# print("Source: ",testVar)
-					# print("got : ", got)
 							  
 if __name__ == '__main__':
 	eval()
