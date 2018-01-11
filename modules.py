@@ -402,25 +402,68 @@ def conv_block2(inputs,
 		if activation is not None:
 			out = activation(out)
 	return out	
+
+def conv1d(inputs, 
+           filters, 
+           size=1, 
+           rate=1, 
+           padding="SAME", 
+           causal=False,
+           use_bias=False,
+           scope="conv1d"):
+    '''
+    Args:
+      inputs: A 3-D tensor of [batch, time, depth].
+      filters: An int. Number of outputs (=activation maps)
+      size: An int. Filter size.
+      rate: An int. Dilation rate.
+      padding: Either `SAME` or `VALID`.
+      causal: A boolean. If True, zeros of (kernel size - 1) * rate are padded on the left
+        for causality.
+      use_bias: A boolean.
+    
+    Returns:
+      A masked tensor of the sampe shape as `tensor`.
+    '''
+    
+    with tf.variable_scope(scope):
+        if causal:
+            # pre-padding for causality
+            pad_len = (size - 1) * rate  # padding size
+            inputs = tf.pad(inputs, [[0, 0], [pad_len, 0], [0, 0]])
+            padding = "VALID"
+            
+        params = {"inputs":inputs, "filters":filters, "kernel_size":size,
+                "dilation_rate":rate, "padding":padding, "activation":None, 
+                "use_bias":use_bias}
+        
+        out = tf.layers.conv1d(**params)
+    
+    return out
 	
 	
 def Conv1D(inputs, channels, kernel_size, dilation,causal=True,is_training=True,dropout=0.1, activation=None, scope = "Conv1D", reuse=None):
 	with tf.variable_scope(scope, reuse=reuse):
-		inputs = tf.layers.dropout(inputs, rate=dropout,training=is_training)
-		outputs = conv1d(inputs, channels, kernel_size, scope, dilation, causal,)
+		outputs = conv1d(inputs, channels, size=kernel_size, scope=scope, rate=dilation, causal=causal,)
 		if activation is not None:
 			outputs=activation(outputs)
-	return outputs
+	return tf.layers.dropout(outputs, rate=dropout,training=is_training)
 
 def ddConv1D(inputs, channels, kernel_size, dilation,causal=True,is_training=True, activation=None, dropout=0.1, scope = "Conv1D", reuse=None):
 	with tf.variable_scope(scope, reuse=reuse):
 		outputs = conv_block2(inputs,num_units=channels, size=kernel_size,rate=dilation,training=is_training,activation=activation,dropout_rate=dropout)
 	return outputs
 
-def HConv1D(inputs, channels, kernel_size, dilation, causal=True,is_training=True, activation=None, scope = "HConv1D", reuse=None):
+def ddHConv1D(inputs, channels, kernel_size, dilation, causal=True,is_training=True, activation=None, scope = "HConv1D", reuse=None):
 	with tf.variable_scope(scope, reuse=reuse):
 		H2 = Conv1D(inputs, channels, kernel_size, dilation=dilation, causal=causal,is_training=is_training,activation=activation,scope='c1d-H2')
 		H1 = Conv1D(inputs, channels, kernel_size, dilation=dilation, causal=causal,is_training=is_training,activation=tf.nn.sigmoid,scope='c1d-H1')
+	return H1 * H2 + inputs * (1.0 - H1)
+def HConv1D(inputs, channels, kernel_size, dilation, causal=True,is_training=True, activation=None, scope = "HConv1D", reuse=None):
+	with tf.variable_scope(scope, reuse=reuse):
+		H = Conv1D(inputs, 2*channels, kernel_size, dilation=dilation, causal=causal,is_training=is_training,activation=activation,scope='c1d-H')
+		H1,H2 = tf.split(H,num_or_size_splits=2,axis=2)
+		H1 = tf.nn.sigmoid(H1)
 	return H1 * H2 + inputs * (1.0 - H1)
 
 def dilated_causal_conv1d(x, filter,kernel, dialation):
@@ -549,7 +592,7 @@ def obatch_to_time(x, block_size):
 	#	mul_or_none(shape[1], block_size),
 	#	shape[2]])
 	return y
-def conv1d(x,
+def ooconv1d(x,
 		   num_filters,
 		   filter_length,
 		   name,
@@ -570,10 +613,10 @@ def conv1d(x,
 		transformed = time_to_batch(padded,dilation)
 		b,t,c = transformed.get_shape().as_list()
 		##print("trans ",name,b,t,c)
-		conv = tf.nn.conv1d(transformed,filters_,stride=1,padding='SAME')
+		conv = tf.nn.conv1d(transformed,filters_,stride=1,padding='VALID')
 		restored = batch_to_time(conv,dilation)
 	else:
-		restored = tf.nn.conv1d(padded,filters_,stride=1,padding='SAME')
+		restored = tf.nn.conv1d(padded,filters_,stride=1,padding='VALID')
 	b,t,c = restored.get_shape().as_list()
 	##print("restored ",name,b,t,c)
 	#out_width = in_time-(filter_length-1)*dilation

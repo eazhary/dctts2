@@ -24,10 +24,12 @@ class Hyperparams:
 	
 	# model
 	maxlen = 180 # Maximum number of letters in a sentance = T.
-	Ty = 870 # Max number of timesteps 
+	Ty = 868 # Max number of timesteps 
+	Tyr = 217 # Max number of timesteps 
 	e = 128
 	d = 256
 	c = 512
+	lr = 2e-4
 	g=0.2
 	b1 = 0.5
 	b2 = 0.9
