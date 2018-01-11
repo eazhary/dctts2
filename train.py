@@ -84,7 +84,8 @@ class Graph():
 #				self.y = tf.reshape(self.y,shape=[-1,hp.Ty,])
 			else: # inference
 				self.text = tf.placeholder(tf.int32, shape=(None, hp.maxlen))
-				self.mel = tf.placeholder(tf.float32, shape=(None,hp.Tyr,hp.n_mels))
+#				self.mel = tf.placeholder(tf.float32, shape=(None,hp.Tyr,hp.n_mels))
+				self.mel = tf.placeholder(tf.float32, shape=(None,None,hp.n_mels))
 				w = np.fromfunction(w2, (hp.maxlen, hp.Tyr), dtype='f')
 				w = np.expand_dims(w,0)
 				#w = np.repeat(w,2,0)
@@ -93,7 +94,11 @@ class Graph():
 				#self.y = tf.placeholder(tf.int32, shape=(None, hp.maxlen))
 
 			# define decoder inputs
-			self.decoder_inputs = tf.concat((tf.zeros_like(self.mel[:, :1,:]), self.mel[:, :-1,:]), 1) # shift mels to right
+			if is_training:
+				self.decoder_inputs = tf.concat((tf.zeros_like(self.mel[:, :1,:]), self.mel[:, :-1,:]), 1) # shift mels to right
+			else:
+				self.decoder_inputs = tf.concat((tf.zeros_like(self.mel[:, :1,:]), self.mel[:, :-1,:]), 1) # shift mels to right
+#				self.decoder_inputs=self.mel
 			char2idx, idx2char = load_vocab()
 			with tf.variable_scope("Text2Mel"):
 				with tf.variable_scope("TextEnc"):
