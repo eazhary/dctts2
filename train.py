@@ -45,11 +45,13 @@ def get_data():
 	def _pad(text,mel,mag,textlen,mellen):
 		text = tf.pad(text, ((0, hp.maxlen),))[:hp.maxlen] # (Tx,)
 		mel = tf.pad(mel, ((0, hp.Tyr), (0, 0)))[:hp.Tyr] # (Tyr, n_mels)
+#		textlen = tf.cast(textlen,tf.int32)
+#		mellen = tf.cast(mellen,tf.int32)
 		mag = tf.pad(mag, ((0, hp.Ty), (0, 0)))[:hp.Ty] # (Ty, 1+n_fft/2)
 		return text,mel,mag,textlen,mellen
 	#filenames = tf.gfile.Glob("data/*.txt")
 	dataset = tf.data.TextLineDataset(tf.convert_to_tensor(hp.metafile))
-	dataset = dataset.map(lambda text: tuple(tf.py_func(mypyfunc, [text], [tf.int32, tf.float32, tf.float32, tf.int32,tf.int32])))
+	dataset = dataset.map(lambda text: tuple(tf.py_func(mypyfunc, [text], [tf.int32, tf.float32, tf.float32, tf.int64,tf.int64])))
 	dataset = dataset.map(_pad)
 	#dataset = dataset.filter(lambda x,y: tf.less_equal(tf.size(y),hp.maxlen))
 	dataset = dataset.repeat()
@@ -144,7 +146,8 @@ class Graph():
 				self.A = tf.nn.softmax(self.A) #B,180,870
 				#self.A *=1000
 				if not is_training:
-					self.A = self.A_guide
+				#	self.A = self.A_guide
+					pass
 				self.AT = tf.transpose(self.A,perm=[0,2,1]) # (B,870,180)
 				#self.AT = tf.nn.softmax(self.AT)
 				self.R = tf.matmul(self.VT,self.A)			# B,d,180 * B,180,870 -> B,d,870
@@ -253,17 +256,17 @@ if __name__ == '__main__':
 #			gs, text = sess.run([g.global_step,g.text])
 			message = "Step %-7d : loss=%.05f,l1=%.05f,bin=%.05f,A_loss=%.05f" % (gs,loss,l1,bin,A_loss)
 			print(message)
-			if gs % 10 == 0:
+			if gs % hp.logevery == 0:
 				show(mels[0],inp[0],"0.png")
 				show(mels[1],inp[1],"1.png")
-				att = np.zeros((A.shape[1],A.shape[2]))
-				pos = np.argmax(A[0],1)
-				for i,p in enumerate(pos):
-					att[i,p]=1
-				showmels(att,"argmaxed","ar.png")
+				#att = np.zeros((A.shape[1],A.shape[2]))
+				#pos = np.argmax(A[0],1)
+				#for i,p in enumerate(pos):
+				#	att[i,p]=1
+				#showmels(att,"argmaxed","ar.png")
 				showmels(A[0],tdecode(text[0]),"a0.png")
 				showmels(A[1],tdecode(text[1]),"a1.png")
-				showmels(guide[0],tdecode(text[0]),"m0.png")
+				#showmels(guide[0],tdecode(text[0]),"m0.png")
 				
 
 	# next_element = get_data()

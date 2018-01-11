@@ -19,7 +19,8 @@ def eval():
 	dest = 'LJ017-0105'
 	inp = "Cook's death was horrible"
 	mel = np.load(os.path.join(hp.data_dir, "mels", dest + ".npy"))
-	mels = np.zeros(shape=(hp.Ty,hp.n_mels))
+	mel = mel[::4,:]
+	mels = np.zeros(shape=(hp.Tyr,hp.n_mels))
 	mels[:mel.shape[0],:mel.shape[1]]=mel
 		
 	#inp = "Printing, in the only sense with which we are at present concerned, differs from most if not from all the arts and crafts represented in the Exhibition"
@@ -37,13 +38,13 @@ def eval():
 			saver = tf.train.Saver()
 			saver.restore(sess, tf.train.latest_checkpoint(hp.logdir));
 			print("Restored")
-			preds = np.zeros((1, hp.Ty, hp.n_mels), np.float32)
+			preds = np.zeros((1, hp.Tyr, hp.n_mels), np.float32)
 			for j in range(200):
 				print("Processing %d"%j)
 				_preds,a = sess.run([g.mel_output, g.A], {g.text: x, g.mel: preds})
 				preds[:,j,:] = _preds[:,j,:]
 				#show(preds[0],mels,"pred%d.png"%j)
-				#showmels(a[0],"Attention","att%d.png"%j)
+			#	showmels(a[0],"Attention","att%d.png"%j)
 				#preds = _preds
 			show(preds[0],mels,"predicted.png")
 							  
