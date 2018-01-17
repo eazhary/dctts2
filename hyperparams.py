@@ -4,11 +4,12 @@ class Hyperparams:
 	data_dir = 'LJSpeech-1.0/'
 	metafile = 'LJSpeech-1.0/metadata.csv'
 	#metafile = 'LJSpeech-1.0/m.csv'
-	batch_size = 16 # alias = N
+	batch_size = 2 # alias = N
 	warmup_steps = 200
 	logdir = 'logdir' # log directory
 	sr = 22050
 	n_fft = 2048 # fft points (samples)
+	fd = 1+n_fft//2
 	frame_shift = 0.0125 # seconds
 	frame_length = 0.05 # seconds
 	hop_length = 256 # samples	This is dependent on the frame_shift.
@@ -17,7 +18,11 @@ class Hyperparams:
 	sharpening_factor = 1.4 # Exponent for amplifying the predicted magnitude
 	n_iter = 50 # Number of inversion iterations
 	preemphasis = .97 # or None
+	griffin_lim_iters=60
+	power=1.5              # Power to raise magnitudes to prior to Griffin-Lim
+
 	max_db = 100
+	min_db = -100
 	ref_db = 20
 	max_grad_norm = 100.
 	max_grad_val = 5.
@@ -34,7 +39,7 @@ class Hyperparams:
 	b1 = 0.5
 	b2 = 0.9
 	eps = 1e-6
-	logevery = 100	
+	logevery = 10	
 	dropout_rate = 0.1
 	
 	

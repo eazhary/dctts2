@@ -13,6 +13,7 @@ import os
 import time
 import numpy as np
 import re
+import audio
 
 def load_vocab():
 	#characters = "PSEاإأآبتثجحخدذرزسشصضطظعغفقكلمنهويىؤءةئ ًٌٍَُِّْ،." # Arabic character set
@@ -66,7 +67,29 @@ def w2(n,t):
 	
 def w_fun(n, t):
 	return 1 - np.exp(-((n/(hp.maxlen-1) - t/(hp.Tyr-1))**2) / (2 * hp.g**2))
-    
+def guide_fn(x):
+	prva=-1
+	for i in range(x.shape[1]):
+		
+		pos = np.argmax(x[:,i])
+		val = x[pos,i]
+		if (pos<prva-1) or (pos>prva+3):
+			x[:,i]=np.zeros(x.shape[0],dtype='f')
+			pp = min(x.shape[0]-1,prva+1)
+			x[pp,i]=1
+			#print("%d-Corrected from %d to %d - prva %d"%(i,pos,pp,prva))
+		else:
+			#x[:,i]=np.zeros(x.shape[0],dtype='f')
+			#x[pos,i]=1
+			pass
+			#print("%d-Was ok %d - prva %d"%(i,pos,prva))
+		prva=np.argmax(x[:,i])
+	return x
+
+
+def guide_atten(inputs): # 180,XX
+	return tf.py_func(guide_fn,[inputs],tf.float32)
+
 class Graph():
 	def __init__(self, is_training=True):
 		self.graph = tf.Graph()
@@ -97,8 +120,8 @@ class Graph():
 			if is_training:
 				self.decoder_inputs = tf.concat((tf.zeros_like(self.mel[:, :1,:]), self.mel[:, :-1,:]), 1) # shift mels to right
 			else:
-				self.decoder_inputs = tf.concat((tf.zeros_like(self.mel[:, :1,:]), self.mel[:, :-1,:]), 1) # shift mels to right
-#				self.decoder_inputs=self.mel
+				#self.decoder_inputs = tf.concat((tf.zeros_like(self.mel[:, :1,:]), self.mel[:, :-1,:]), 1) # shift mels to right
+				self.decoder_inputs=self.mel
 			char2idx, idx2char = load_vocab()
 			with tf.variable_scope("Text2Mel"):
 				with tf.variable_scope("TextEnc"):
@@ -148,10 +171,10 @@ class Graph():
 					
 				self.A = tf.matmul(self.K,self.QT)	  # (B,180,d) * (B,d,870) = (B,180,870)
 				self.A *= tf.sqrt(1/tf.to_float(hp.d))
-				self.A = tf.nn.softmax(self.A) #B,180,870
+				self.A = tf.nn.softmax(self.A,dim=1) #B,180,870
 				#self.A *=1000
 				if not is_training:
-				#	self.A = self.A_guide
+					self.A = tf.map_fn(guide_atten,self.A,parallel_iterations=1)
 					pass
 				self.AT = tf.transpose(self.A,perm=[0,2,1]) # (B,870,180)
 				#self.AT = tf.nn.softmax(self.AT)
@@ -171,8 +194,23 @@ class Graph():
 						self.audiodec=Conv1D(self.audiodec,hp.d,1,1,dropout=0,is_training=is_training,scope='c1d-2-%d'%i,activation=tf.nn.relu)
 					self.mel_logits = Conv1D(self.audiodec,hp.n_mels,1,1,dropout=0,is_training=is_training,scope='c1d-3') # (B,Tyr,nmels)
 					self.mel_output = tf.nn.sigmoid(self.mel_logits)														#(B,Tyr,nmels)
-							
 			
+			with tf.variable_scope("SSRN"):
+				self.ssrn = Conv1D(self.mel,hp.c,1,1,causal=False,is_training=is_training,scope='c1d-1')
+				self.ssrn = HConv1D(self.ssrn,hp.c,3,1,causal=False,is_training=is_training,scope='hc1d-1')
+				self.ssrn = HConv1D(self.ssrn,hp.c,3,3,causal=False,is_training=is_training,scope='hc1d-2')
+				for i in range(2):
+					self.ssrn = Deconv1D(self.ssrn,hp.c,2,1,scope='deconv-%d'%i)
+					self.ssrn = HConv1D(self.ssrn,hp.c,3,1,causal=False,is_training=is_training,scope='hc1d-31-%d'%i)
+					self.ssrn = HConv1D(self.ssrn,hp.c,3,3,causal=False,is_training=is_training,scope='hc1d-32-%d'%i)
+				self.ssrn = Conv1D(self.ssrn,hp.c*2,1,1,causal=False,is_training=is_training,scope='c1d-2')
+				for i in range(2):
+					self.ssrn=HConv1D(self.ssrn,hp.c*2,3,1,causal=False,is_training=is_training,scope='hc1d-4-%d'%i)
+				self.ssrn = Conv1D(self.ssrn,hp.fd,1,1,causal=False,is_training=is_training,scope='c1d-3')
+				for i in range(2):
+					self.ssrn=Conv1D(self.ssrn,hp.fd,1,1,causal=False,is_training=is_training,activation=tf.nn.relu,scope='c1d-4-%d'%i)
+				self.mag_logits = Conv1D(self.ssrn,hp.fd,1,1,causal=False,is_training=is_training,scope='c1d-5')
+				self.mag_output = tf.nn.sigmoid(self.mag_logits)
 			if is_training:	 
 				# Loss
 				self.global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -180,10 +218,12 @@ class Graph():
 				#self.istarget = tf.to_float(tf.not_equal(self.text, 0)) # (batch,180) (1,1,1,1,0,0,0,0,0,0,0,0,0,0)
 				
 				
-				self.l1_loss = tf.reduce_mean(tf.abs(self.mel-self.mel_output))
-				self.bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mel_logits,labels=self.mel))
+				self.mel_l1_loss = tf.reduce_mean(tf.abs(self.mel-self.mel_output))
+				self.mel_bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mel_logits,labels=self.mel))
 				self.A_loss = tf.reduce_mean(self.A_guide*self.A)
-
+				self.mag_l1_loss = tf.reduce_mean(tf.abs(self.mag-self.mag_output))
+				self.mag_bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mag_logits,labels=self.mag))
+				
 #				self.l1_loss = tf.abs(self.mel-self.mel_output) * tf.to_float(tf.not_equal(self.mel, 0.))
 #				self.bin_div = tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mel_logits,labels=self.mel) * tf.to_float(tf.not_equal(self.mel, 0.))
 #				self.l1_loss = tf.reduce_mean(self.l1_loss)
@@ -192,25 +232,32 @@ class Graph():
 				
 				
 				
-				self.loss_mels = self.l1_loss+self.bin_div+self.A_loss
+				self.loss_mels = self.mel_l1_loss + self.mel_bin_div + self.A_loss
+				self.loss_mags = self.mag_l1_loss + self.mag_bin_div
+				self.loss_all = self.loss_mels + self.loss_mags
 				self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=hp.b1, beta2=hp.b2, epsilon=hp.eps)
-				self.gvs = self.optimizer.compute_gradients(self.loss_mels) 
-				self.clipped = []
-				for grad, var in self.gvs:
-					if grad is not None:
-					#grad = tf.clip_by_value(grad, -1. * hp.max_grad_val, hp.max_grad_val)
-						grad = tf.clip_by_norm(grad, hp.max_grad_norm)
-						
-					self.clipped.append((grad, var))
-				self.train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
+#				self.gvs = self.optimizer.compute_gradients(self.loss_mels) 
+#				self.clipped = []
+#				for grad, var in self.gvs:
+#					if grad is not None:
+#						grad = tf.clip_by_norm(grad, hp.max_grad_norm)
+#						
+#					self.clipped.append((grad, var))
+#				self.train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
+				self.train_mel = self.optimizer.minimize(self.loss_mels,global_step=self.global_step)
+				self.train_mag = self.optimizer.minimize(self.loss_mags,global_step=self.global_step)
+				self.train_all = self.optimizer.minimize(self.loss_all,global_step=self.global_step)
 				#self.train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
 				
 				#self.train_op = self.optimizer.minimize(self.loss_mels, global_step=self.global_step)
+				tf.summary.scalar('Total_Loss', self.loss_all)
 				tf.summary.scalar('loss_mels', self.loss_mels)
-				tf.summary.scalar('loss_l1', self.l1_loss)
-				tf.summary.scalar('learning_rate', self.learning_rate)
-				tf.summary.scalar('loss_binary', self.bin_div)
+				tf.summary.scalar('loss_mel_l1', self.mel_l1_loss)
+				tf.summary.scalar('loss_mel_binary', self.mel_bin_div)
 				tf.summary.scalar('loss_Attention', self.A_loss)
+				tf.summary.scalar('loss_mags', self.loss_mags)
+				tf.summary.scalar('loss_mag_binary', self.mag_bin_div)
+				tf.summary.scalar('loss_mag_l1', self.mag_l1_loss)
 			self.merged = tf.summary.merge_all()
 
 def show(mel1,mel2,name):
@@ -254,33 +301,53 @@ if __name__ == '__main__':
 	sv = tf.train.Supervisor(graph=g.graph, 
 							 logdir=hp.logdir,)
 							 #save_model_secs=0)
-	
+	train = 3 # 1=mels. 2=mags 3=all
 	with sv.managed_session() as sess:
-		while not sv.should_stop(): 
-			gs,loss,l1,bin,A_loss,mels,inp,A,guide,text,ops=sess.run([g.global_step,g.loss_mels,g.l1_loss,g.bin_div,g.A_loss,g.mel_output,g.mel,g.A,g.A_guide,g.text,g.train_op])
-#			gs, text = sess.run([g.global_step,g.text])
-			message = "Step %-7d : loss=%.05f,l1=%.05f,bin=%.05f,A_loss=%.05f" % (gs,loss,l1,bin,A_loss)
-			print(message)
-			if gs % hp.logevery == 0:
-				show(mels[0],inp[0],"0.png")
-				show(mels[1],inp[1],"1.png")
-				#att = np.zeros((A.shape[1],A.shape[2]))
-				#pos = np.argmax(A[0],1)
-				#for i,p in enumerate(pos):
-				#	att[i,p]=1
-				#showmels(att,"argmaxed","ar.png")
-				showmels(A[0],tdecode(text[0]),"a0.png")
-				showmels(A[1],tdecode(text[1]),"a1.png")
-				#showmels(guide[0],tdecode(text[0]),"m0.png")
+		while not sv.should_stop():
+			if train == 1:
+				gs,l_m,l_m_l1,l_m_b,l_A,t_i,m_i,a,m_o,ops = sess.run([g.global_step,
+					g.loss_mels,g.mel_l1_loss,g.mel_bin_div,g.A_loss,g.text,g.mel,g.A,g.mel_output,g.train_mel])
+				message = "Step %-7d : loss=%.05f,l1=%.05f,bin=%.05f,A_loss=%.05f" % (gs,l_m,l_m_l1,l_m_b,l_A)
+				print(message)
+				if gs % hp.logevery == 0:
+					show(m_o[0],m_i[0],"0.png")
+					show(m_o[1],m_i[1],"1.png")
+					showmels(a[0],tdecode(t_i[0]),"a0.png")
+					showmels(a[1],tdecode(t_i[1]),"a1.png")
+				
+			elif train == 2:
+				gs,l_M,l_M_l1,l_M_b,M_i,M_o,ops = sess.run([g.global_step,
+					g.loss_mags,g.mag_l1_loss,g.mag_bin_div,g.mag,g.mag_output,g.train_mag])
+				message = "Step %-7d : loss=%.05f,l1=%.05f,bin=%.05f" % (gs,l_M,l_M_l1,l_M_b)
+				print(message)
+				if gs % hp.logevery == 0:
+					show(M_o[0],M_i[0],"0.png")
+					show(M_o[1],M_i[1],"1.png")
+					#showmels(a[0],tdecode(t_i[0]),"a0.png")
+					#showmels(a[1],tdecode(t_i[1]),"a1.png")
+			elif train == 3:
+				gs,l_all,l_m_l1,l_m_b,l_A,l_M_l1,l_M_b,ops = sess.run([g.global_step,
+					g.loss_all,g.mel_l1_loss,g.mel_bin_div,g.A_loss,g.mag_l1_loss,g.mag_bin_div,g.train_all])
+				message = "Step %d : l=%.05f (ml1=%.05f,mb=%.05f,a=%.05f),(Ml1=%.05f,Mb=%.05f)" % (gs,l_all,l_m_l1,l_m_b,l_A,l_M_l1,l_M_b)
+				print(message)
+				if gs % hp.logevery == 0:
+					gs,l_all,l_m_l1,l_m_b,l_A,l_M_l1,l_M_b,m_o,m_i,a,M_o,M_i,t_i,ops = sess.run([g.global_step,
+						g.loss_all,g.mel_l1_loss,g.mel_bin_div,g.A_loss,g.mag_l1_loss,g.mag_bin_div,
+						g.mel_output,g.mel, g.A, g.mag_output, g.mag,g.text,g.train_all])
+					message = "Step %d : l=%.05f (ml1=%.05f,mb=%.05f,a=%.05f),(Ml1=%.05f,Mb=%.05f)" % (gs,l_all,l_m_l1,l_m_b,l_A,l_M_l1,l_M_b)
+					#message = "Step %-7d : loss=%.05f (m_l1=%.05f,m_bin=%.05f,A_loss=%.05f),(M_l1=%.05f,M_bin=%.05f)" % (gs,l_all,l_m_l1,l_m_b,l_A,l_M_l1,l_M_b)
+					print(message)
+					audio.save_spec(M_o[0].T,"out0.wav")
+					audio.save_spec(M_o[1].T,"out1.wav")
+					show(M_o[0],M_i[0],"mag0.png")		
+					show(M_o[1],M_i[1],"mag1.png")		
+					show(m_o[0],m_i[0],"mel0.png")		
+					show(m_o[1],m_i[1],"mel1.png")
+					showmels(a[0],tdecode(t_i[0]),"a0.png")
+					showmels(a[1],tdecode(t_i[1]),"a1.png")
+				pass
 				
 
-	# next_element = get_data()
-	# with tf.Session() as sess:
-		# for i in range(500):
-			# s = time.time()
-			# text,mel,mag = sess.run(next_element)
-			# e = time.time()
-			# print("took:",e-s,text.shape,mel.shape,mag.shape)
 	print("Done")	 
 	
 

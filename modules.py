@@ -441,13 +441,23 @@ def conv1d(inputs,
     
     return out
 	
+def conv1d_transpose(x,filters,kernel_size,strides):
+	x = tf.expand_dims(x,1)
+	outputs=tf.layers.conv2d_transpose(x,filters,kernel_size,strides=(1,strides),padding='same')
+	outputs = tf.squeeze(outputs,1)
+	return outputs
+
+def Deconv1D(inputs, channels, kernel_size,dilation,scope="deconv1d"):
+	with tf.variable_scope(scope, reuse=False):
+		outputs = conv1d_transpose(inputs,channels,kernel_size,2)
+		return outputs
 	
 def Conv1D(inputs, channels, kernel_size, dilation,causal=True,is_training=True,dropout=0.1, activation=None, scope = "Conv1D", reuse=None):
 	with tf.variable_scope(scope, reuse=reuse):
 		outputs = conv1d(inputs, channels, size=kernel_size, scope=scope, rate=dilation, causal=causal,)
 		if activation is not None:
 			outputs=activation(outputs)
-	return tf.layers.dropout(outputs, rate=dropout,training=is_training)
+		return tf.layers.dropout(outputs, rate=dropout,training=is_training)
 
 def ddConv1D(inputs, channels, kernel_size, dilation,causal=True,is_training=True, activation=None, dropout=0.1, scope = "Conv1D", reuse=None):
 	with tf.variable_scope(scope, reuse=reuse):
@@ -464,7 +474,7 @@ def HConv1D(inputs, channels, kernel_size, dilation, causal=True,is_training=Tru
 		H = Conv1D(inputs, 2*channels, kernel_size, dilation=dilation, causal=causal,is_training=is_training,activation=activation,scope='c1d-H')
 		H1,H2 = tf.split(H,num_or_size_splits=2,axis=2)
 		H1 = tf.nn.sigmoid(H1)
-	return H1 * H2 + inputs * (1.0 - H1)
+		return H1 * H2 + inputs * (1.0 - H1)
 
 def dilated_causal_conv1d(x, filter,kernel, dialation):
 	padding = (tf.shape(filter)[0] - 1) * dialation
