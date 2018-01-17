@@ -7,6 +7,7 @@ import numpy as np
 import sys
 from hyperparams import Hyperparams as hp
 from train import Graph, load_vocab, clean, showmels, show
+import audio
 
 def eval(): 
 	# Load graph
@@ -18,10 +19,10 @@ def eval():
 	char2idx, idx2char = load_vocab()
 #	inp = "For although the Chinese took impressions from wood blocks engraved in relief for centuries before the woodcutters of the Netherlands, by a similar process"
 #	dest = 'LJ001-0003'
-#	dest = 'LJ017-0105'
-#	inp = "Cook's death was horrible"
-	inp = "Printing, in the only sense with which we are at present concerned, differs from most if not from all the arts and crafts represented in the Exhibition"
-	dest = 'LJ001-0001'
+	dest = 'LJ017-0105'
+	inp = "Cook's death was horrible"
+#	inp = "Printing, in the only sense with which we are at present concerned, differs from most if not from all the arts and crafts represented in the Exhibition"
+#	dest = 'LJ001-0001'
 #	inp = "one two three one two three one two three one two three one two three one two three one two three one two three"
 	mel = np.load(os.path.join(hp.data_dir, "mels", dest + ".npy"))
 	mel = mel[::4,:]
@@ -69,7 +70,8 @@ def eval():
 				#preds = _preds
 			show(preds[0],mels[0],"predicted.png")
 			showmels(a[0],"Attention","attfinal.png")
-							  
+			mags = sess.run(g.mag_output,{g.mel: preds})
+			audio.save_spec(mags[0].T,"out.wav")				  
 if __name__ == '__main__':
 	eval()
 	print("Done")

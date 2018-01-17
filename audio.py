@@ -67,6 +67,8 @@ def _stft_parameters():
   n_fft = hp.n_fft
   hop_length = int(hp.frame_shift * hp.sr)
   win_length = int(hp.frame_length  * hp.sr)
+  hop_length = hp.hop_length
+  win_length = hp.win_length
   return n_fft, hop_length, win_length
 
 

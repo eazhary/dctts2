@@ -79,8 +79,8 @@ def guide_fn(x):
 			x[pp,i]=1
 			#print("%d-Corrected from %d to %d - prva %d"%(i,pos,pp,prva))
 		else:
-			#x[:,i]=np.zeros(x.shape[0],dtype='f')
-			#x[pos,i]=1
+			x[:,i]=np.zeros(x.shape[0],dtype='f')
+			x[pos,i]=1
 			pass
 			#print("%d-Was ok %d - prva %d"%(i,pos,prva))
 		prva=np.argmax(x[:,i])
