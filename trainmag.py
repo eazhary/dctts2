@@ -69,8 +69,9 @@ class Graph():
 			if is_training:	 
 				# Loss
 				self.global_step = tf.Variable(0, name='global_step', trainable=False)
-				self.learning_rate = _learning_rate_decay(self.global_step)
-				
+#				self.learning_rate = _learning_rate_decay(self.global_step)
+				self.learning_rate = tf.train.exponential_decay(hp.lr,self.global_step,3000,0.9)
+
 				
 				self.mag_l1_loss = tf.reduce_mean(tf.abs(self.mag-self.mag_output))
 				self.mag_bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mag_logits,labels=self.mag))

@@ -43,7 +43,7 @@ def get_data():
 		mels = np.load(os.path.join(hp.data_dir, "mels", dest + ".npy"))
 		mels = mels[::4,:]
 		return np.array(source, dtype=np.int32),mels
-	def _pad(text,mel,mag,textlen,mellen):
+	def _pad(text,mel):
 		text = tf.pad(text, ((0, hp.maxlen),))[:hp.maxlen] # (Tx,)
 		mel = tf.pad(mel, ((0, hp.Tyr), (0, 0)))[:hp.Tyr] # (Tyr, n_mels)
 		return text,mel
@@ -168,7 +168,8 @@ class Graph():
 			if is_training:	 
 				# Loss
 				self.global_step = tf.Variable(0, name='global_step', trainable=False)
-				self.learning_rate = _learning_rate_decay(self.global_step)
+#				self.learning_rate = _learning_rate_decay(self.global_step)
+				self.learning_rate = tf.train.exponential_decay(hp.lr,self.global_step,1500,0.9)
 				self.mel_l1_loss = tf.reduce_mean(tf.abs(self.mel-self.mel_output))
 				self.mel_bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mel_logits,labels=self.mel))
 				self.A_loss = tf.reduce_mean(self.A_guide*self.A)
