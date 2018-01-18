@@ -4,9 +4,10 @@ class Hyperparams:
 	data_dir = 'LJSpeech-1.0/'
 	metafile = 'LJSpeech-1.0/metadata.csv'
 	#metafile = 'LJSpeech-1.0/m.csv'
-	batch_size = 16 # alias = N
+	batch_size = 2 # alias = N
 	warmup_steps = 200
 	logdir = 'logdir' # log directory
+	logdirmag = 'logdirmag' # log directory
 	sr = 22050
 	n_fft = 2048 # fft points (samples)
 	fd = 1+n_fft//2
