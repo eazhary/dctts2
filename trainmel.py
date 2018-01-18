@@ -245,8 +245,8 @@ if __name__ == '__main__':
 				message = "Step %-7d : loss=%.05f,l1=%.05f,bin=%.05f,A_loss=%.05f" % (gs,l_m,l_m_l1,l_m_b,l_A)
 				sys.stdout.write('\r'+message)
 				sys.stdout.flush()
-				show(m_o[0],m_i[0],"0.png")
-				show(m_o[1],m_i[1],"1.png")
+				show(m_o[0],m_i[0],"mel0.png")
+				show(m_o[1],m_i[1],"mel1.png")
 				showmels(a[0],tdecode(t_i[0]),"a0.png")
 				showmels(a[1],tdecode(t_i[1]),"a1.png")
 
