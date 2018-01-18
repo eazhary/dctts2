@@ -90,6 +90,7 @@ class Graph():
 				tf.summary.scalar('loss_mags', self.loss_mags)
 				tf.summary.scalar('loss_mag_binary', self.mag_bin_div)
 				tf.summary.scalar('loss_mag_l1', self.mag_l1_loss)
+				tf.summary.scalar('learning_rate', self.learning_rate)
 			self.merged = tf.summary.merge_all()
 
 def show(mel1,mel2,name):
@@ -119,9 +120,7 @@ def showmels(mel,msg,file):
 def _learning_rate_decay(global_step):
   # Noam scheme from tensor2tensor:
   step = tf.cast(global_step + 1, dtype=tf.float32)
-  return hp.lr
-  #return hp.c**-0.5 * tf.minimum(step * hp.warmup_steps**-1.5, step**-0.5)
-
+  return hp.init_lr * hp.warmup_steps**0.5 * tf.minimum(step * hp.warmup_steps**-1.5, step**-0.5)
 
 
 				
