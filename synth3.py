@@ -27,10 +27,11 @@ def eval():
 #	inp = "Printing, in the only sense with which we are at present concerned, differs from most if not from all the arts and crafts represented in the Exhibition"
 #	dest = 'LJ001-0001'
 #	inp = "one two three one two three one two three one two three one two three one two three one two three one two three"
-	mel = np.load(os.path.join(hp.data_dir, "mels", dest + ".npy"))
-	mel = mel[::4,:]
+	#mel = np.load(os.path.join(hp.data_dir, "mels", dest + ".npy"))
+	#mel = mel[::4,:]
+	inp = "السيد المهندس المحترم عماد الدين "
 	mels = np.zeros(shape=(hp.Tyr,hp.n_mels))
-	mels[:mel.shape[0],:mel.shape[1]]=mel
+	#mels[:mel.shape[0],:mel.shape[1]]=mel
 	mels=mels.reshape(1,-1,80)
 		
 	#inp = "Printing, in the only sense with which we are at present concerned, differs from most if not from all the arts and crafts represented in the Exhibition"

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 class Hyperparams:
 	'''Hyperparameters'''
-	data_dir = 'LJSpeech-1.0/'
-	metafile = 'LJSpeech-1.0/metadata.csv'
+
+	data_dir = 'sisi/'
+	data = 'sisi/'
+	metafile = 'sisi/sisi2.csv'
 	#metafile = 'LJSpeech-1.0/m.csv'
-	batch_size = 2 # alias = N
+	batch_size = 16 # alias = N
 	warmup_steps = 4000
 	logdir = 'logdir' # log directory
 	logdirmag = 'logdirmag' # log directory

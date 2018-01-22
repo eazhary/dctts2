@@ -17,16 +17,18 @@ import re
 import audio
 
 def load_vocab():
-	#characters = "PSEاإأآبتثجحخدذرزسشصضطظعغفقكلمنهويىؤءةئ ًٌٍَُِّْ،." # Arabic character set
-	characters = "PE abcdefghijklmnopqrstuvwxyz'.,?"  # P: Padding E: End of Sentence
+
+	characters = "PEاإأآبتثجحخدذرزسشصضطظعغفقكلمنهويىؤءةئ ًٌٍَُِّْ،." # Arabic character set
+	#characters = "PE abcdefghijklmnopqrstuvwxyz'.,?"  # P: Padding E: End of Sentence
 	
 	char2idx = {char: idx for idx, char in enumerate(characters)}
 	idx2char = {idx: char for idx, char in enumerate(characters)}
 	return char2idx, idx2char
 	
 def clean(text):
-	text=text.lower()
-	re_list = r"[^ abcdefghijklmnopqrstuvwxyz'.,?]" # E: Empty. ignore G
+	#text=text.lower()
+	#re_list = r"[^ abcdefghijklmnopqrstuvwxyz'.,?]" # E: Empty. ignore G
+	re_list = r"[^اإأآبتثجحخدذرزسشصضطظعغفقكلمنهويىؤءةئ ًٌٍَُِّْ،.]" # Arabic character set
 	_text = re.sub(re_list, "", text)
 	return(_text)
 		
@@ -34,9 +36,9 @@ def clean(text):
 def get_data():
 	def mypyfunc(text):
 		text = text.decode("utf-8")
-		items = text.split("|")
+		items = text.split(",")
 		char2idx,_=load_vocab()
-		text = items[2].lower()
+		text = items[1]
 		text = clean(text)
 		source = [char2idx[c] for c in text+'E']
 		dest = items[0]
@@ -51,6 +53,7 @@ def get_data():
 	dataset = dataset.map(lambda text: tuple(tf.py_func(mypyfunc, [text], [tf.int32, tf.float32])))
 	dataset = dataset.map(_pad)
 	dataset = dataset.repeat()
+	dataset = dataset.shuffle(buffer_size=400)
 	dataset = dataset.batch(hp.batch_size)
 	iterator = dataset.make_one_shot_iterator()
 	next_element = iterator.get_next()
@@ -169,9 +172,17 @@ class Graph():
 				# Loss
 				self.global_step = tf.Variable(0, name='global_step', trainable=False)
 #				self.learning_rate = _learning_rate_decay(self.global_step)
-				self.learning_rate = tf.train.exponential_decay(hp.lr,self.global_step,1500,0.9)
-				self.mel_l1_loss = tf.reduce_mean(tf.abs(self.mel-self.mel_output))
-				self.mel_bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mel_logits,labels=self.mel))
+
+				#self.learning_rate = tf.train.exponential_decay(hp.lr,self.global_step,1500,0.9)
+				self.learning_rate = hp.lr
+				
+
+				#self.mel_l1_loss = tf.reduce_mean(tf.abs(self.mel-self.mel_output))
+				self.mel_l1_loss = tf.reduce_sum(tf.abs(self.mel-self.mel_output)*tf.to_float(tf.not_equal(self.mel,0)))/tf.reduce_sum(tf.to_float(tf.not_equal(self.mel,0)))
+
+				#self.mel_bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mel_logits,labels=self.mel))
+				self.mel_bin_div = tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mel_logits,labels=self.mel)
+				self.mel_bin_div = tf.reduce_sum(self.mel_bin_div*tf.to_float(tf.not_equal(self.mel,0)))/tf.reduce_sum(tf.to_float(tf.not_equal(self.mel,0)))
 				self.A_loss = tf.reduce_mean(self.A_guide*self.A)
 				
 				

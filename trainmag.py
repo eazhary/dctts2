@@ -21,7 +21,7 @@ import audio
 def get_data():
 	def mypyfunc(text):
 		text = text.decode("utf-8")
-		items = text.split("|")
+		items = text.split(",")
 		dest = items[0]
 		mels = np.load(os.path.join(hp.data_dir, "mels", dest + ".npy"))
 		mels = mels[::4,:]
@@ -34,6 +34,7 @@ def get_data():
 	dataset = tf.data.TextLineDataset(tf.convert_to_tensor(hp.metafile))
 	dataset = dataset.map(lambda text: tuple(tf.py_func(mypyfunc, [text], [tf.float32, tf.float32])))
 	dataset = dataset.map(_pad)
+	dataset = dataset.shuffle(buffer_size=400)
 	dataset = dataset.repeat()
 	dataset = dataset.batch(hp.batch_size)
 	iterator = dataset.make_one_shot_iterator()
@@ -70,12 +71,18 @@ class Graph():
 				# Loss
 				self.global_step = tf.Variable(0, name='global_step', trainable=False)
 #				self.learning_rate = _learning_rate_decay(self.global_step)
-				self.learning_rate = tf.train.exponential_decay(hp.lr,self.global_step,3000,0.9)
 
-				
-				self.mag_l1_loss = tf.reduce_mean(tf.abs(self.mag-self.mag_output))
-				self.mag_bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mag_logits,labels=self.mag))
-				
+				#self.learning_rate = tf.train.exponential_decay(hp.lr,self.global_step,3000,0.9)
+				self.learning_rate = hp.lr
+
+				l1 = tf.abs(self.mag - self.mag_output)
+				n_priority = int(3000/(hp.sr*0.5) * hp.fd)
+				self.mag_l1_loss = 0.5*tf.reduce_mean(l1) + 0.5 * tf.reduce_mean(l1[:,:,0:n_priority])	
+			#	self.mag_l1_loss = tf.reduce_mean(tf.abs(self.mag-self.mag_output))
+				#self.mag_l1_loss = tf.reduce_sum(tf.abs(self.mag-self.mag_output)*tf.to_float(tf.not_equal(self.mag,0)))/tf.reduce_sum(tf.to_float(tf.not_equal(self.mag,0)))
+			#	self.mag_bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mag_logits,labels=self.mag))
+				self.mag_bin_div = tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mag_logits,labels=self.mag)
+				self.mag_bin_div = tf.reduce_sum(self.mag_bin_div*tf.to_float(tf.not_equal(self.mag,0)))/tf.reduce_sum(tf.to_float(tf.not_equal(self.mag,0)))
 				
 				self.loss_mags = self.mag_l1_loss + self.mag_bin_div
 				self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=hp.b1, beta2=hp.b2, epsilon=hp.eps)
