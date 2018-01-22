@@ -4,9 +4,9 @@ class Hyperparams:
 
 	data_dir = 'sisi/'
 	data = 'sisi/'
-	metafile = 'sisi/sisi2.csv'
+	metafile = 'sisi/sisi.csv'
 	#metafile = 'LJSpeech-1.0/m.csv'
-	batch_size = 16 # alias = N
+	batch_size = 2 # alias = N
 	warmup_steps = 4000
 	logdir = 'logdir' # log directory
 	logdirmag = 'logdirmag' # log directory
@@ -32,9 +32,9 @@ class Hyperparams:
 	max_grad_val = 5.
 	
 	# model
-	maxlen = 180 # Maximum number of letters in a sentance = T.
-	Ty = 868 # Max number of timesteps 
-	Tyr = 217 # Max number of timesteps 
+	maxlen = 110 # Maximum number of letters in a sentance = T.
+	Ty = 752 # Max number of timesteps 
+	Tyr = Ty//4 # Max number of timesteps 
 	e = 128
 	d = 256
 	c = 512
@@ -46,7 +46,7 @@ class Hyperparams:
 	eps = 1e-6
 	logevery = 200	
 	dropout_rate = 0.1
-	
+	masking = False
 	
 	
 	

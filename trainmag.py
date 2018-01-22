@@ -80,9 +80,9 @@ class Graph():
 				self.mag_l1_loss = 0.5*tf.reduce_mean(l1) + 0.5 * tf.reduce_mean(l1[:,:,0:n_priority])	
 			#	self.mag_l1_loss = tf.reduce_mean(tf.abs(self.mag-self.mag_output))
 				#self.mag_l1_loss = tf.reduce_sum(tf.abs(self.mag-self.mag_output)*tf.to_float(tf.not_equal(self.mag,0)))/tf.reduce_sum(tf.to_float(tf.not_equal(self.mag,0)))
-			#	self.mag_bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mag_logits,labels=self.mag))
-				self.mag_bin_div = tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mag_logits,labels=self.mag)
-				self.mag_bin_div = tf.reduce_sum(self.mag_bin_div*tf.to_float(tf.not_equal(self.mag,0)))/tf.reduce_sum(tf.to_float(tf.not_equal(self.mag,0)))
+				self.mag_bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mag_logits,labels=self.mag))
+				#self.mag_bin_div = tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mag_logits,labels=self.mag)
+				#self.mag_bin_div = tf.reduce_sum(self.mag_bin_div*tf.to_float(tf.not_equal(self.mag,0)))/tf.reduce_sum(tf.to_float(tf.not_equal(self.mag,0)))
 				
 				self.loss_mags = self.mag_l1_loss + self.mag_bin_div
 				self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=hp.b1, beta2=hp.b2, epsilon=hp.eps)

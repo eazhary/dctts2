@@ -175,18 +175,22 @@ class Graph():
 
 				#self.learning_rate = tf.train.exponential_decay(hp.lr,self.global_step,1500,0.9)
 				self.learning_rate = hp.lr
+				if hp.masking:
+					self.is_target = tf.to_float(tf.not_equal(self.mel,0))
+					#self.mel_l1_loss = tf.reduce_mean(tf.abs(self.mel-self.mel_output))
+					self.mel_l1_loss = tf.reduce_sum(tf.abs(self.mel-self.mel_output)*self.is_target)/tf.reduce_sum(self.is_target)
+
+					#self.mel_bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mel_logits,labels=self.mel))
+					self.mel_bin_div = tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mel_logits,labels=self.mel)
+					self.mel_bin_div = tf.reduce_sum(self.mel_bin_div*self.is_target)/tf.reduce_sum(self.is_target)
+				else:
+					self.mel_l1_loss = tf.reduce_mean(tf.abs(self.mel-self.mel_output))
+					self.mel_bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mel_logits,labels=self.mel))
 				
-
-				#self.mel_l1_loss = tf.reduce_mean(tf.abs(self.mel-self.mel_output))
-				self.mel_l1_loss = tf.reduce_sum(tf.abs(self.mel-self.mel_output)*tf.to_float(tf.not_equal(self.mel,0)))/tf.reduce_sum(tf.to_float(tf.not_equal(self.mel,0)))
-
-				#self.mel_bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mel_logits,labels=self.mel))
-				self.mel_bin_div = tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mel_logits,labels=self.mel)
-				self.mel_bin_div = tf.reduce_sum(self.mel_bin_div*tf.to_float(tf.not_equal(self.mel,0)))/tf.reduce_sum(tf.to_float(tf.not_equal(self.mel,0)))
 				self.A_loss = tf.reduce_mean(self.A_guide*self.A)
 				
 				
-				self.loss_mels = self.mel_l1_loss + self.mel_bin_div + self.A_loss
+				self.loss_mels = self.mel_l1_loss + self.mel_bin_div + 10*self.A_loss
 				self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=hp.b1, beta2=hp.b2, epsilon=hp.eps)
 #				self.gvs = self.optimizer.compute_gradients(self.loss_mels) 
 #				self.clipped = []
