@@ -21,7 +21,7 @@ import audio
 def get_data():
 	def mypyfunc(text):
 		text = text.decode("utf-8")
-		items = text.split(",")
+		items = text.split("|")
 		dest = items[0]
 		mels = np.load(os.path.join(hp.data_dir, "mels", dest + ".npy"))
 		mels = mels[::4,:]
@@ -75,9 +75,9 @@ class Graph():
 				#self.learning_rate = tf.train.exponential_decay(hp.lr,self.global_step,3000,0.9)
 				self.learning_rate = hp.lr
 
-				l1 = tf.abs(self.mag - self.mag_output)
-				n_priority = int(3000/(hp.sr*0.5) * hp.fd)
-				self.mag_l1_loss = 0.5*tf.reduce_mean(l1) + 0.5 * tf.reduce_mean(l1[:,:,0:n_priority])	
+				self.l1 = tf.abs(self.mag - self.mag_output)
+				self.n_priority = int(3000/(hp.sr*0.5) * hp.fd)
+				self.mag_l1_loss = 0.5*tf.reduce_mean(self.l1) + 0.5 * tf.reduce_mean(self.l1[:,:,0:self.n_priority])	
 			#	self.mag_l1_loss = tf.reduce_mean(tf.abs(self.mag-self.mag_output))
 				#self.mag_l1_loss = tf.reduce_sum(tf.abs(self.mag-self.mag_output)*tf.to_float(tf.not_equal(self.mag,0)))/tf.reduce_sum(tf.to_float(tf.not_equal(self.mag,0)))
 				self.mag_bin_div = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.mag_logits,labels=self.mag))
@@ -104,11 +104,11 @@ class Graph():
 def show(mel1,mel2,name):
 	plt.figure(figsize=(8,4))
 	plt.subplot(2,1,1)
-	plt.imshow(np.transpose(mel1),interpolation='nearest',  cmap=plt.cm.afmhot, origin='lower')
+	plt.imshow(np.transpose(mel1),interpolation='nearest', aspect='auto', cmap=plt.cm.afmhot, origin='lower')
 	plt.title("Generated")
 	plt.colorbar()
 	plt.subplot(2,1,2)
-	plt.imshow(np.transpose(mel2),interpolation='nearest',  cmap=plt.cm.afmhot, origin='lower')
+	plt.imshow(np.transpose(mel2),interpolation='nearest', aspect='auto', cmap=plt.cm.afmhot, origin='lower')
 	plt.title("Original")
 	plt.colorbar()
 	plt.savefig(name)

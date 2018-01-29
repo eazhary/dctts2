@@ -18,17 +18,17 @@ import audio
 
 def load_vocab():
 
-	characters = "PEاإأآبتثجحخدذرزسشصضطظعغفقكلمنهويىؤءةئ ًٌٍَُِّْ،." # Arabic character set
-	#characters = "PE abcdefghijklmnopqrstuvwxyz'.,?"  # P: Padding E: End of Sentence
+#	characters = "PEاإأآبتثجحخدذرزسشصضطظعغفقكلمنهويىؤءةئ ًٌٍَُِّْ،." # Arabic character set
+	characters = "PE abcdefghijklmnopqrstuvwxyz'.,?"  # P: Padding E: End of Sentence
 	
 	char2idx = {char: idx for idx, char in enumerate(characters)}
 	idx2char = {idx: char for idx, char in enumerate(characters)}
 	return char2idx, idx2char
 	
 def clean(text):
-	#text=text.lower()
-	#re_list = r"[^ abcdefghijklmnopqrstuvwxyz'.,?]" # E: Empty. ignore G
-	re_list = r"[^اإأآبتثجحخدذرزسشصضطظعغفقكلمنهويىؤءةئ ًٌٍَُِّْ،.]" # Arabic character set
+	text=text.lower()
+	re_list = r"[^ abcdefghijklmnopqrstuvwxyz'.,?]" # E: Empty. ignore G
+	#re_list = r"[^اإأآبتثجحخدذرزسشصضطظعغفقكلمنهويىؤءةئ ًٌٍَُِّْ،.]" # Arabic character set
 	_text = re.sub(re_list, "", text)
 	return(_text)
 		
@@ -36,7 +36,7 @@ def clean(text):
 def get_data():
 	def mypyfunc(text):
 		text = text.decode("utf-8")
-		items = text.split(",")
+		items = text.split("|")
 		char2idx,_=load_vocab()
 		text = items[1]
 		text = clean(text)
@@ -66,11 +66,12 @@ def w_fun(n, t):
 
 def guide_fn(x):
 	prva=-1
+	return(x)
 	for i in range(x.shape[1]):
 		
 		pos = np.argmax(x[:,i])
 		val = x[pos,i]
-		if (pos<prva-1) or (pos>prva+3):
+		if (pos<prva) or (pos>prva+1):
 			x[:,i]=np.zeros(x.shape[0],dtype='f')
 			pp = min(x.shape[0]-1,prva+1)
 			x[pp,i]=1
@@ -174,7 +175,7 @@ class Graph():
 #				self.learning_rate = _learning_rate_decay(self.global_step)
 
 				#self.learning_rate = tf.train.exponential_decay(hp.lr,self.global_step,1500,0.9)
-				self.learning_rate = hp.lr
+				self.learning_rate = hp.lr//4
 				if hp.masking:
 					self.is_target = tf.to_float(tf.not_equal(self.mel,0))
 					#self.mel_l1_loss = tf.reduce_mean(tf.abs(self.mel-self.mel_output))

@@ -11,7 +11,7 @@ from trainmel import Graph as melmodel
 from trainmag import Graph as magmodel
 import audio
 
-def eval(): 
+def eval(i): 
 	# Load graph
 	g1 = melmodel(is_training=False)
 	g2 = magmodel(is_training=False)
@@ -22,16 +22,24 @@ def eval():
 	char2idx, idx2char = load_vocab()
 #	inp = "For although the Chinese took impressions from wood blocks engraved in relief for centuries before the woodcutters of the Netherlands, by a similar process"
 #	dest = 'LJ001-0003'
-	dest = 'LJ017-0105'
-	inp = "Cook's death was horrible"
-#	inp = "Printing, in the only sense with which we are at present concerned, differs from most if not from all the arts and crafts represented in the Exhibition"
-#	dest = 'LJ001-0001'
-#	inp = "one two three one two three one two three one two three one two three one two three one two three one two three"
-	#mel = np.load(os.path.join(hp.data_dir, "mels", dest + ".npy"))
-	#mel = mel[::4,:]
-	inp = "السيد المهندس المحترم عماد الدين "
+#	
+	files=[]
+	inps=[]
+	with open(hp.metafile, encoding='utf-8') as f:
+		for line in f:
+			parts=line.strip().split(',')
+			files.append(parts[0])
+			inps.append(parts[1])
+		
+	dest=files[i]
+	
+	inp=inps[i]
+	inp="انا عبد الفتاح السيسي رئيس الجمهورية"
+	mel = np.load(os.path.join(hp.data_dir, "mels", dest + ".npy"))
+	mel = mel[::4,:]
+	print(inp)
 	mels = np.zeros(shape=(hp.Tyr,hp.n_mels))
-	#mels[:mel.shape[0],:mel.shape[1]]=mel
+	mels[:mel.shape[0],:mel.shape[1]]=mel
 	mels=mels.reshape(1,-1,80)
 		
 	#inp = "Printing, in the only sense with which we are at present concerned, differs from most if not from all the arts and crafts represented in the Exhibition"
@@ -83,7 +91,7 @@ def eval():
 			mags = sess.run(g2.mag_output,{g2.mel: preds})
 			audio.save_spec(mags[0].T,"out.wav")				  
 if __name__ == '__main__':
-	eval()
+	eval(int(sys.argv[1]))
 	print("Done")
 	
 	
