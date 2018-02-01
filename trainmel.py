@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-June 2017 by kyubyong park. 
-kbpark.linguist@gmail.com.
-https://www.github.com/kyubyong/transformer
+Feb 2018 by eazhary 
+eazhary@gmail.com.
+https://www.github.com/eazhary/dctts2
 '''
 from __future__ import print_function
 import tensorflow as tf

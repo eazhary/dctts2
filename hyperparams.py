@@ -4,7 +4,6 @@ class Hyperparams:
 
 	data_dir = 'LJSpeech-1.0/'
 	data = 'LJSpeech-1.0/'
-	#metafile = 'sisi/sisi.csv'
 	metafile = 'LJSpeech-1.0/metadata.csv'
 	batch_size = 16 # alias = N
 	warmup_steps = 4000
