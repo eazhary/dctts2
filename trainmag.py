@@ -99,6 +99,8 @@ class Graph():
 				tf.summary.scalar('loss_mag_binary', self.mag_bin_div)
 				tf.summary.scalar('loss_mag_l1', self.mag_l1_loss)
 				tf.summary.scalar('learning_rate', self.learning_rate)
+			else:
+				self.wav_output = audio.inv_spectrogram_tensorflow(self.mag_output)
 			self.merged = tf.summary.merge_all()
 
 def show(mel1,mel2,name):

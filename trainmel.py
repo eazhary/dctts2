@@ -66,8 +66,12 @@ def w_fun(n, t):
 
 def guide_fn(x):
 	prva=-1
-	return(x)
-	for i in range(x.shape[1]):
+	#return(x)
+	f=40
+	if x.shape[1]<=f:
+		return(x)
+	prva = np.argmax(x[:,f])-1
+	for i in range(f,x.shape[1]):
 		
 		pos = np.argmax(x[:,i])
 		val = x[pos,i]
