@@ -26,6 +26,12 @@ $ python trainmel.py
 
 during training you can review the output (by default every 200 minibatches) it dumps the first two examples in the batch into mel0.png & mel1.png as well view the learned attention through a0.png & a1.png
 
+### MEL
+<img src="fig/mel0.png">
+
+### Attention
+<img src="fig/a0.png">
+
 ## train the SSRN network
 
 ```
