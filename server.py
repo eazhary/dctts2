@@ -4,7 +4,7 @@ app = Flask(__name__,template_folder='', static_folder='',static_url_path='')
 
 @app.route("/")
 def main():
-	return render_template('synth2.html')
+	return render_template('synth.html')
 		
 @app.route("/synthesize")
 def syn():
@@ -13,4 +13,4 @@ def syn():
 		return Response(wave, mimetype='audio/wav')
 s = Synth()		
 if __name__ == "__main__":
-	app.run(debug=True)
+	app.run(host="0.0.0.0")

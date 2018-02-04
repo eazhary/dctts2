@@ -73,5 +73,6 @@ if __name__ == '__main__':
 	s = Synth()
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--text',help='Text to Synthesize',default='The Big Brown Fox Jumped Over The Lazy Dog')
+	parser.add_argument('--file',help='File to save to ',default='output.wav')
 	args = parser.parse_args()
-	s.synth(args.text)
+	s.synth(args.text, args.file)
