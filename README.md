@@ -26,6 +26,12 @@ $ python trainmel.py
 
 during training you can review the output (by default every 200 minibatches) it dumps the first two examples in the batch into mel0.png & mel1.png as well view the learned attention through a0.png & a1.png
 
+### MEL
+<img src="fig/mel0.png">
+
+### Attention
+<img src="fig/a0.png">
+
 ## train the SSRN network
 
 ```
@@ -33,6 +39,9 @@ $ python trainmag.py
 ```
 
 during training you can view the output through mag0.png & mag1.png, which compares the learned spectrogram with the groung truth.
+
+### MAG
+<img src="fig/mag0.png">
 
 ## Synthesize
 
