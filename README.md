@@ -40,6 +40,9 @@ $ python trainmag.py
 
 during training you can view the output through mag0.png & mag1.png, which compares the learned spectrogram with the groung truth.
 
+### MAG
+<img src="fig/mag0.png">
+
 ## Synthesize
 
 to synthesize a new sentance use:
