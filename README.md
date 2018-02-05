@@ -9,6 +9,10 @@ The code is based on the following implementations
 The model trains "text2mel" & "SSRN" seperately through trainmel.py & trainmag.py respectively
 You need to download the LJSpeech dataset available at https://keithito.com/LJ-Speech-Dataset/
 
+## Audio Samples
+
+You can listen to audio samples **[Here](https:://eazhary.github.io/samples.html)**
+
 ## prepare the dataset
 
 First, you have to prepare dataset. If you want to use the [LJSpeech](https://keithito.com/LJ-Speech-Dataset/) dataset, you can use the following commands.
