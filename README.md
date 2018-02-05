@@ -11,7 +11,7 @@ You need to download the LJSpeech dataset available at https://keithito.com/LJ-S
 
 ## Audio Samples
 
-You can listen to audio samples**[Audio Samples](https://eazhary.github.io/samples.html)** 
+You can listen to audio samples **[Audio Samples](https://eazhary.github.io/samples.html)** 
 
 
 ## prepare the dataset
